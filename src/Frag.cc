@@ -217,6 +217,24 @@ void FragReassembler::BlockInserted(DataBlockMap::const_iterator /* it */) {
     // We have it all.  Compute the expected size of the fragment.
     const uint64_t n = proto_hdr_len + frag_size;
 
+    unsigned int version = (reinterpret_cast<const ip*>(proto_hdr))->ip_v;
+
+    if ( version == 4 ) {
+        if ( n > 0xFFFF ) {
+            Weird("oversized_reassembled_packet");
+            DeleteTimer();
+            return;
+        }
+    }
+
+    else if ( version == 6 ) {
+        if ( frag_size + proto_hdr_len - 40 > 0xFFFF ) {
+            Weird("oversized_reassembled_packet");
+            DeleteTimer();
+            return;
+        }
+    }
+
     // It's possible that we have blocks associated with this fragment
     // that exceed this size, if we saw MF fragments (which don't lead
     // to us setting frag_size) that went beyond the size indicated by
@@ -256,8 +274,6 @@ void FragReassembler::BlockInserted(DataBlockMap::const_iterator /* it */) {
     }
 
     reassembled_pkt.reset();
-
-    unsigned int version = (reinterpret_cast<const ip*>(pkt_start))->ip_v;
 
     if ( version == 4 ) {
         struct ip* reassem4 = reinterpret_cast<ip*>(pkt_start);
