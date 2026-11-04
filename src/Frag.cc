@@ -219,10 +219,12 @@ void FragReassembler::BlockInserted(DataBlockMap::const_iterator /* it */) {
 
     unsigned int version = (reinterpret_cast<const ip*>(proto_hdr))->ip_v;
 
+    // Check to ensure that reassembled packet is not too large
     if ( version == 4 ) {
         if ( n > 0xFFFF ) {
             Weird("oversized_reassembled_packet");
             DeleteTimer();
+            Expire(run_state::network_time);
             return;
         }
     }
@@ -231,6 +233,7 @@ void FragReassembler::BlockInserted(DataBlockMap::const_iterator /* it */) {
         if ( frag_size + proto_hdr_len - 40 > 0xFFFF ) {
             Weird("oversized_reassembled_packet");
             DeleteTimer();
+            Expire(run_state::network_time);
             return;
         }
     }
